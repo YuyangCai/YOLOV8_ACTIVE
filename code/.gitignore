@@ -1,0 +1,31 @@
+
+# 忽略所有 .bash 开头的文件
+.bash*
+
+# 忽略 .conda 文件夹及其所有内容
+.conda/
+
+# 忽略 .config 文件夹及其所有内容
+.config/
+
+# 忽略 .local 文件夹及其所有内容
+.local/
+
+# 忽略 SSH 配置和密钥
+.ssh/
+
+# 忽略 vim 临时文件
+.viminfo
+
+# 忽略所有的 Shell 脚本文件
+*.sh
+
+# 忽略所有的 Debian 软件包文件
+*.deb
+
+# 忽略所有的运行文件
+*.run
+
+# 忽略所有的 PyTorch 模型文件
+*.pt
+
