@@ -6,6 +6,10 @@ import json
 import numpy as np
 from pathlib import Path
 import shutil
+import time
+from tqdm import tqdm
+
+
 
 # 设置基本路径和文件名
 BASE_PATH = '/home/cyy/code/yolov8/user_yaml' 
@@ -13,12 +17,12 @@ ORIGINAL_YAML = 'coco.yaml'
 TEMP_YAML = 'temp_coco.yaml'
 IMAGE_LIST = 'temp_image_list.txt'
 VALIDATION_LIST = 'validation_image_list.txt'
-PREDICTIONS_FILE = 'predictions.json'
+PREDICTIONS_FILE = '/home/cyy/code/predictions.json'
 
-samples = 10000  #设置每轮训练的样本数
-SAMPLES_DIR = Path('/home/cyy/code/samples/test11')
+samples = 1000  #设置每轮训练的样本数
+SAMPLES_DIR = Path('/home/cyy/code/samples/test15')
 
-cycles = 9
+cycles = 3
 
 
 def load_yaml(filepath):
@@ -99,17 +103,24 @@ fixed_weights_dir.mkdir(parents= True, exist_ok=True)
 fixed_last_weights_path = fixed_weights_dir / 'last.pt'
 
 
+# 在主循环之前初始化累积的选择图像列表
+accumulated_selected_images = set()
+
 for cycle in range(cycles):
-    print(f"Cycle {cycle + 1}/cycles")
+    print(f"Cycle {cycle + 1}/{cycles}")
 
     if cycle != 0:
         # 更新训练集
         training_images = remaining_images
-        selected_images, remaining_images = process_predictions(os.path.join('predictions.json'), list(training_images))
+        selected_images, remaining_images = process_predictions(os.path.join('/home/cyy/code/predictions.json'), list(training_images))
         remaining_images = set(remaining_images)  # Convert list to set for next iteration
 
+
+    # 累积选中的图像
+    accumulated_selected_images.update(selected_images)
+
     # 更新文件列表
-    save_image_list(list(selected_images), os.path.join(BASE_PATH, IMAGE_LIST))
+    save_image_list(list(accumulated_selected_images), os.path.join(BASE_PATH, IMAGE_LIST))
     save_image_list(list(remaining_images), os.path.join(BASE_PATH, VALIDATION_LIST))
 
     # 更新配置文件
@@ -119,20 +130,28 @@ for cycle in range(cycles):
 
     # 训练模型
     if cycle == 0:
-        model = train_model(os.path.join(BASE_PATH, TEMP_YAML), 150, 224, 16, 0.01, val=True)
+        model = train_model(os.path.join(BASE_PATH, TEMP_YAML), 3, 224, 16, 0.01, val=True)
     else:
-        model.train(data=os.path.join(BASE_PATH, TEMP_YAML), model=str(fixed_last_weights_path), epochs=150, imgsz=224, batch=16, lr0=0.01, cache=True, resume=True)
+        model.train(data=os.path.join(BASE_PATH, TEMP_YAML), model=str(latest_weights_path), epochs=3, imgsz=224, batch=16, lr0=0.01, cache=True, resume=True)
+
+    # 设置等待时间为90秒
+    wait_time = 90  # 单位是秒
+
+    # 使用tqdm创建进度条
+    for _ in tqdm(range(wait_time), desc='Waiting for next cycle'):
+        time.sleep(1)  # 每秒更新一次
+
+
 
     # Update weights
     latest_train_dir = max(Path('/home/cyy/code/runs/detect').glob('train*'), key=os.path.getmtime)
     latest_weights_path = latest_train_dir / 'weights/last.pt'
     shutil.copy(latest_weights_path, fixed_last_weights_path)
 
-model = YOLO('/home/cyy/code/random_runs/detect/weights/last.pt')
+model = YOLO(latest_weights_path)
 validation_results = model.val(data='/home/cyy/code/yolov8/user_yaml/coco.yaml',
-                               
                                imgsz=224,
                                batch=16,
                                conf=0.25,
-                               iou=0.6,
+                               iou=0.6, 
                                device=0)
