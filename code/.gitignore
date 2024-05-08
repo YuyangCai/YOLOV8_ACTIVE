@@ -28,4 +28,19 @@
 
 # 忽略所有的 PyTorch 模型文件
 *.pt
+# 忽略所有 .log 文件
+*.log
+
+# 忽略特定目录及其子目录下的所有文件
+.cache/
+.config/
+.local/
+.ssh/
+
+# 忽略单个文件
+.vscode-server/
+.wget-hsts
+
+# 忽略所有带数字的目录如 runs/detect/train23/
+runs/detect/train*/
 
